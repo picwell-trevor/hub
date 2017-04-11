@@ -504,6 +504,47 @@ func (client *Client) FetchIssues(project *Project, filterParams map[string]inte
 	return
 }
 
+func (client *Client) FetchPullRequests(project *Project, filterParams map[string]interface{}) (prs []PullRequest, err error) {
+	api, err := client.simpleApi()
+	if err != nil {
+		return
+	}
+
+	path := fmt.Sprintf("repos/%s/%s/pulls?per_page=100", project.Owner, project.Name)
+	if filterParams != nil {
+		query := url.Values{}
+		for key, value := range filterParams {
+			switch v := value.(type) {
+			case string:
+				query.Add(key, v)
+			}
+		}
+
+		path += "&" + query.Encode()
+	}
+
+	prs = []PullRequest{}
+	var res *simpleResponse
+
+	for path != "" {
+		res, err = api.Get(path)
+		if err = checkStatus(200, "fetching pull requests", res, err); err != nil {
+			return
+		}
+
+		path = res.Link("next")
+
+		prsPage := []PullRequest{}
+		if err = res.Unmarshal(&prsPage); err != nil {
+			return
+		}
+
+		prs = append(prs, prsPage...)
+	}
+
+	return
+}
+
 func (client *Client) CreateIssue(project *Project, params interface{}) (issue *Issue, err error) {
 	api, err := client.simpleApi()
 	if err != nil {

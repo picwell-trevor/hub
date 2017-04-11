@@ -21,8 +21,14 @@ pull-request [-foc] [-b <BASE>] [-h <HEAD>] [-a <USERS>] [-M <MILESTONE>] [-l <L
 pull-request -m <MESSAGE>
 pull-request -F <FILE> [--edit]
 pull-request -i <ISSUE>
+pull-request list [-s <STATUS>]
 `,
-	Long: `Create a GitHub pull request.
+	Long: `Create and view GitHub pull requests.
+
+## Commands:
+
+  * _list_:
+    List pull requests for this repository.
 
 ## Options:
 	-f, --force
@@ -77,12 +83,25 @@ hub(1), hub-merge(1), hub-checkout(1)
 `,
 }
 
+var cmdListPullRequests = &Command{
+	Key:   "list",
+	Run:   listPullRequests,
+	Usage: "pull-request list [-s <STATUS>]",
+	Long: `List pull requests.
+
+## Options:
+  -s, --status <STATUS>
+    Display pull requests with the given status.
+`,
+}
+
 var (
 	flagPullRequestBase,
 	flagPullRequestHead,
 	flagPullRequestIssue,
 	flagPullRequestMessage,
-	flagPullRequestFile string
+	flagPullRequestFile,
+	flagPullRequestListState string
 
 	flagPullRequestBrowse,
 	flagPullRequestCopy,
@@ -97,6 +116,8 @@ var (
 )
 
 func init() {
+	cmdListPullRequests.Flag.StringVarP(&flagPullRequestListState, "state", "s", "", "STATE")
+
 	cmdPullRequest.Flag.StringVarP(&flagPullRequestBase, "base", "b", "", "BASE")
 	cmdPullRequest.Flag.StringVarP(&flagPullRequestHead, "head", "h", "", "HEAD")
 	cmdPullRequest.Flag.StringVarP(&flagPullRequestIssue, "issue", "i", "", "ISSUE")
@@ -110,6 +131,8 @@ func init() {
 	cmdPullRequest.Flag.VarP(&flagPullRequestAssignees, "assign", "a", "USERS")
 	cmdPullRequest.Flag.Uint64VarP(&flagPullRequestMilestone, "milestone", "M", 0, "MILESTONE")
 	cmdPullRequest.Flag.VarP(&flagPullRequestLabels, "labels", "l", "LABELS")
+
+	cmdPullRequest.Use(cmdListPullRequests)
 
 	CmdRunner.Use(cmdPullRequest)
 }
@@ -413,4 +436,34 @@ func parsePullRequestIssueNumber(url string) string {
 	}
 
 	return ""
+}
+
+func listPullRequests(cmd *Command, args *Args) {
+	localRepo, err := github.LocalRepo()
+	utils.Check(err)
+
+	project, err := localRepo.MainProject()
+	utils.Check(err)
+
+	gh := github.NewClient(project.Host)
+
+	flagFilters := map[string]string{
+		"state": flagPullRequestListState,
+	}
+
+	filters := map[string]interface{}{}
+	for flag, filter := range flagFilters {
+		if cmd.FlagPassed(flag) {
+			filters[flag] = filter
+		}
+	}
+
+	prs, err := gh.FetchPullRequests(project, filters)
+	utils.Check(err)
+
+	for _, pullRequest := range prs {
+		ui.Printf("%6s] %s\n", strconv.Itoa(pullRequest.Number), pullRequest.Title)
+	}
+
+	args.NoForward()
 }
