@@ -86,12 +86,18 @@ hub(1), hub-merge(1), hub-checkout(1)
 var cmdListPullRequests = &Command{
 	Key:   "list",
 	Run:   listPullRequests,
-	Usage: "pull-request list [-s <STATUS>]",
+	Usage: "pull-request list [-s <STATUS>] [-b <BASE>] [-h <HEAD>]",
 	Long: `List pull requests.
 
 ## Options:
   -s, --status <STATUS>
     Display pull requests with the given status.
+
+  -b, --base <BASE>
+    Filter by base branch.
+
+  -h, --head <HEAD>
+    Filter by head.
 `,
 }
 
@@ -101,7 +107,9 @@ var (
 	flagPullRequestIssue,
 	flagPullRequestMessage,
 	flagPullRequestFile,
-	flagPullRequestListState string
+	flagPullRequestListState,
+	flagPullRequestListHead,
+	flagPullRequestListBase string
 
 	flagPullRequestBrowse,
 	flagPullRequestCopy,
@@ -117,6 +125,8 @@ var (
 
 func init() {
 	cmdListPullRequests.Flag.StringVarP(&flagPullRequestListState, "state", "s", "", "STATE")
+	cmdListPullRequests.Flag.StringVarP(&flagPullRequestListHead, "head", "h", "", "HEAD")
+	cmdListPullRequests.Flag.StringVarP(&flagPullRequestListBase, "base", "b", "", "BASE")
 
 	cmdPullRequest.Flag.StringVarP(&flagPullRequestBase, "base", "b", "", "BASE")
 	cmdPullRequest.Flag.StringVarP(&flagPullRequestHead, "head", "h", "", "HEAD")
@@ -449,6 +459,8 @@ func listPullRequests(cmd *Command, args *Args) {
 
 	flagFilters := map[string]string{
 		"state": flagPullRequestListState,
+		"head":  flagPullRequestListHead,
+		"base":  flagPullRequestListBase,
 	}
 
 	filters := map[string]interface{}{}
