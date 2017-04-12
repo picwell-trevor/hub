@@ -204,6 +204,22 @@ func (r *GitHubRepo) MainProject() (project *Project, err error) {
 	return
 }
 
+func (r *GitHubRepo) RemoteProject(remoteName string) (project *Project, err error) {
+	origin, err := r.RemoteByName(remoteName)
+	if err != nil {
+		err = fmt.Errorf("Aborted: the %s remote doesn't point to a GitHub repository.", remoteName)
+		return
+	}
+
+	project, err = origin.Project()
+	if err != nil {
+		err = fmt.Errorf("Aborted: the %s remote doesn't point to a GitHub repository.", remoteName)
+		return
+	}
+
+	return
+}
+
 func (r *GitHubRepo) CurrentProject() (project *Project, err error) {
 	project, err = r.UpstreamProject()
 	if err != nil {

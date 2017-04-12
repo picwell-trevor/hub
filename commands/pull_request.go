@@ -21,7 +21,7 @@ pull-request [-foc] [-b <BASE>] [-h <HEAD>] [-a <USERS>] [-M <MILESTONE>] [-l <L
 pull-request -m <MESSAGE>
 pull-request -F <FILE> [--edit]
 pull-request -i <ISSUE>
-pull-request list [-s <STATUS>]
+pull-request list [-s <STATUS>] [-r <REMOTE>]
 `,
 	Long: `Create and view GitHub pull requests.
 
@@ -86,7 +86,7 @@ hub(1), hub-merge(1), hub-checkout(1)
 var cmdListPullRequests = &Command{
 	Key:   "list",
 	Run:   listPullRequests,
-	Usage: "pull-request list [-s <STATUS>] [-b <BASE>] [-h <HEAD>]",
+	Usage: "pull-request list [-s <STATUS>] [-b <BASE>] [-h <HEAD>] [-r <REMOTE>]",
 	Long: `List pull requests.
 
 ## Options:
@@ -98,6 +98,9 @@ var cmdListPullRequests = &Command{
 
   -h, --head <HEAD>
     Filter by head.
+
+  -r, --remote
+    Display pull requests for a remote (defaults to origin).
 `,
 }
 
@@ -109,7 +112,8 @@ var (
 	flagPullRequestFile,
 	flagPullRequestListState,
 	flagPullRequestListHead,
-	flagPullRequestListBase string
+	flagPullRequestListBase,
+	flagPullRequestListRemote string
 
 	flagPullRequestBrowse,
 	flagPullRequestCopy,
@@ -127,6 +131,7 @@ func init() {
 	cmdListPullRequests.Flag.StringVarP(&flagPullRequestListState, "state", "s", "", "STATE")
 	cmdListPullRequests.Flag.StringVarP(&flagPullRequestListHead, "head", "h", "", "HEAD")
 	cmdListPullRequests.Flag.StringVarP(&flagPullRequestListBase, "base", "b", "", "BASE")
+	cmdListPullRequests.Flag.StringVarP(&flagPullRequestListRemote, "remote", "r", "origin", "REMOTE")
 
 	cmdPullRequest.Flag.StringVarP(&flagPullRequestBase, "base", "b", "", "BASE")
 	cmdPullRequest.Flag.StringVarP(&flagPullRequestHead, "head", "h", "", "HEAD")
@@ -452,7 +457,7 @@ func listPullRequests(cmd *Command, args *Args) {
 	localRepo, err := github.LocalRepo()
 	utils.Check(err)
 
-	project, err := localRepo.MainProject()
+	project, err := localRepo.RemoteProject(flagPullRequestListRemote)
 	utils.Check(err)
 
 	gh := github.NewClient(project.Host)
